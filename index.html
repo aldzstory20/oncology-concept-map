@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oncology Nursing Care - Concept Map</title>
+  <!-- Vis-Network CDN -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {
+      --primary-bg: #1a202c;
+      --header-bg: #0f172a;
+      --accent-color: #3b82f6;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      
+      /* Category Colors */
+      --color-master: #1e1b4b;
+      --color-root: #334155;
+      --color-complication: #991b1b;
+      --color-assessment: #b45309;
+      --color-intervention: #166534;
+      --color-monitoring: #0e7490;
+      --color-education: #6b21a8;
+      --color-outcome: #1e40af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: #0b0f19;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* HEADER STYLES */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      padding: 1rem 1.5rem;
+      border-bottom: 3px solid #38bdf8;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .header-titles h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-titles h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-top: 2px;
+    }
+
+    .header-titles p {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    /* MAIN CONTENT LAYOUT */
+    .main-container {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #network-container {
+      flex: 1;
+      height: 100%;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    }
+
+    /* SIDEBAR / DETAILS PANEL */
+    .details-panel {
+      width: 380px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-left: 1px solid #334155;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+      box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+      z-index: 5;
+    }
+
+    .details-panel h3 {
+      font-size: 1.1rem;
+      color: #38bdf8;
+      border-bottom: 2px solid #334155;
+      padding-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .details-content {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+
+    .details-content .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .details-content h4 {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+      color: #f8fafc;
+    }
+
+    .details-content p {
+      margin-bottom: 12px;
+      color: #cbd5e1;
+    }
+
+    /* LEGEND OVERLAY */
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #334155;
+      padding: 12px 16px;
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      z-index: 5;
+      pointer-events: auto;
+    }
+
+    .legend h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #e2e8f0;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    /* Responsiveness */
+    @media (max-width: 900px) {
+      .main-container {
+        flex-direction: column;
+      }
+      .details-panel {
+        width: 100%;
+        height: 250px;
+        border-left: none;
+        border-top: 1px solid #334155;
+      }
+      .legend {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-titles">
+      <h1>Kolehiyo ng Lungsod ng Dasmariñas</h1>
+      <h2>CCLC (Critical Care Nursing) - Group 4: Oncology Nursing Care</h2>
+      <p>Prepared by: Aldz Jervin Delos Santos Reyes</p>
+    </div>
+    <div class="header-controls">
+      <button class="btn" onclick="resetZoom()">Reset View</button>
+      <button class="btn" onclick="togglePhysics()" id="physicsBtn">Freeze Layout</button>
+    </div>
+  </header>
+
+  <!-- MAIN CANVAS & SIDEBAR -->
+  <div class="main-container">
+    
+    <!-- NETWORK MAP CONTAINER -->
+    <div id="network-container"></div>
+
+    <!-- LEGEND OVERLAY -->
+    <div class="legend">
+      <h4>Node Legend</h4>
+      <div class="legend-grid">
+        <div class="legend-item">
+          <div class="legend-color" style="background: #1e1b4b; border: 1px solid #818cf8;"></div>
+          <span>Central Hub</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #334155; border: 1px solid #94a3b8;"></div>
+          <span>Etiology / Root</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #991b1b; border: 1px solid #f87171;"></div>
+          <span>Complications</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #b45309; border: 1px solid #fbbf24;"></div>
+          <span>Assessments</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #166534; border: 1px solid #4ade80;"></div>
+          <span>Interventions</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #0e7490; border: 1px solid #38bdf8;"></div>
+          <span>Monitoring</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #6b21a8; border: 1px solid #c084fc;"></div>
+          <span>Education</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #1e40af; border: 1px solid #60a5fa;"></div>
+          <span>Outcomes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAILS SIDE PANEL -->
+    <div class="details-panel">
+      <h3>Clinical Concept Details</h3>
+      <div id="details-content" class="details-content">
+        <p style="color: #94a3b8; font-style: italic;">Click or tap any node on the concept map to inspect full clinical details, assessment criteria, interventions, and nursing outcomes.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- 1. CLINICAL DATA DEFINITION ---
+    const nodesData = [
+      // Central Hub Node
+      {
+        id: 'master',
+        label: 'ONCOLOGY NURSING CARE\nComplications & Management',
+        group: 'master',
+        shape: 'box',
+        level: 0,
+        fullTitle: 'Central Concept: Oncology Nursing Care',
+        description: 'Comprehensive clinical management framework for common oncological complications resulting from cancer pathology and antineoplastic treatments (Chemotherapy, Radiation, Bone Marrow Suppression).'
+      },
+
+      // --- 1. INFECTION / NEUTROPENIA CHAIN ---
+      {
+        level: 1,
+        id: 'c1_root',
+        label: 'Cancer Treatment:\nChemotherapy',
+        group: 'root',
+        fullTitle: 'Root Etiology: Chemotherapy',
+        description: 'Destroys rapidly dividing bone marrow cells, leading to severe hematopoietic suppression.'
+      },
+      {
+        level: 2,
+        id: 'c1_comp',
+        label: 'Complication:\nNeutropenia & Infection Risk',
+        group: 'complication',
+        fullTitle: 'Complication: Neutropenia & Severe Infection Risk',
+        description: 'Absolute Neutrophil Count (ANC) < 1,500/mm³; Severe Risk < 500/mm³. High risk for opportunistic & systemic infections.'
+      },
+      {
+        level: 3,
+        id: 'c1_assess',
+        label: 'Assessment Findings:\nNeutropenic Fever & Chills',
+        group: 'assessment',
+        fullTitle: 'Assessment Findings: Neutropenic Fever & Signs',
+        description: '• Fever ≥38.3°C single reading OR ≥38.0°C sustained for 1hr\n• Chills, tachycardia, hypotension, sore throat, cough, dysuria, perianal tenderness\n• CRITICAL NOTE: Typical signs of infection like pus or local erythema may be ABSENT due to lack of WBCs.'
+      },
+      {
+        level: 4,
+        id: 'c1_interv',
+        label: 'Priority Interventions:\nNeutropenic Precautions',
+        group: 'intervention',
+        fullTitle: 'Priority Nursing Interventions: Infection Control',
+        description: '• Strict neutropenic precautions (private room, no fresh flowers/fruits, strict hand hygiene)\n• Obtain blood cultures BEFORE starting broad-spectrum antibiotics\n• Administer prescribed G-CSF / Filgrastim\n• Avoid rectal temperatures, suppositories, and IM injections.'
+      },
+      {
+        level: 5,
+        id: 'c1_mon',
+        label: 'Monitoring:\nANC & Infection Sites',
+        group: 'monitoring',
+        fullTitle: 'Clinical Monitoring: Neutropenia',
+        description: '• Daily Absolute Neutrophil Count (track Nadir at 7–14 days post-chemo)\n• Vital signs q4h (fever, BP, HR)\n• Inspect skin folds, IV sites, and mucosa for localized infection.'
+      },
+      {
+        level: 6,
+        id: 'c1_edu',
+        label: 'Patient Education:\nInfection Prevention',
+        group: 'education',
+        fullTitle: 'Patient & Family Education: Infection Risk',
+        description: '• Avoid crowds, young children, and ill individuals\n• Report fever immediately without taking antipyretics first\n• Practice strict hand hygiene and oral care\n• Cook all foods thoroughly (no raw meats/unwashed produce).'
+      },
+      {
+        level: 7,
+        id: 'c1_out',
+        label: 'Outcome:\nInfection-Free Status',
+        group: 'outcome',
+        fullTitle: 'Expected Outcome: Infection Resolution',
+        description: 'Patient remains free from systemic or localized infection; ANC recovers and returns to safe therapeutic levels.'
+      },
+
+      // --- 2. ANEMIA CHAIN ---
+      {
+        level: 1,
+        id: 'c2_root',
+        label: 'Cancer / Treatment:\nBone Marrow Suppression',
+        group: 'root',
+        fullTitle: 'Root Etiology: Bone Marrow Suppression',
+        description: 'Chemotherapy, Radiation, or Chronic Disease suppressing erythropoiesis in the bone marrow.'
+      },
+      {
+        level: 2,
+        id: 'c2_comp',
+        label: 'Complication:\nAnemia / Erythrocytopenia',
+        group: 'complication',
+        fullTitle: 'Complication: Anemia / Erythrocytopenia',
+        description: 'Hemoglobin (Hgb) < 12 g/dL in females, < 14 g/dL in males. Reduced oxygen-carrying capacity of blood.'
+      },
+      {
+        level: 3,
+        id: 'c2_assess',
+        label: 'Assessment Findings:\nFatigue & Pallor',
+        group: 'assessment',
+        fullTitle: 'Assessment Findings: Anemia Manifestations',
+        description: 'Generalized severe fatigue, pallor (skin/mucosa), dyspnea on exertion, tachycardia, dizziness, headache, cold intolerance.'
+      },
+      {
+        level: 4,
+        id: 'c2_interv',
+        label: 'Priority Interventions:\nEnergy Conservation & Transfusion',
+        group: 'intervention',
+        fullTitle: 'Priority Nursing Interventions: Anemia Management',
+        description: '• Administer erythropoiesis-stimulating agents (Epoetin alfa / Darbepoetin)\n• Transfuse Packed RBCs (PRBCs) as ordered\n• Cluster nursing care activities to conserve energy\n• Elevate head of bed (HOB) to relieve dyspnea.'
+      },
+      {
+        level: 5,
+        id: 'c2_mon',
+        label: 'Monitoring:\nHgb / Hct & Activity Tolerance',
+        group: 'monitoring',
+        fullTitle: 'Clinical Monitoring: Anemia',
+        description: '• Hemoglobin (Hgb) and Hematocrit (Hct) levels\n• Activity tolerance and pulse oximetry\n• Respiratory rate and cardiac status during exertion.'
+      },
+      {
+        level: 6,
+        id: 'c2_edu',
+        label: 'Patient Education:\nEnergy Management & Diet',
+        group: 'education',
+        fullTitle: 'Patient Education: Anemia Management',
+        description: '• Prioritize rest periods and balance rest with light activity\n• Consume an iron-rich diet (dark leafy greens, red meat, legumes)\n• Change positions slowly (sitting/lying to standing) to prevent orthostatic hypotension.'
+      },
+      {
+        level: 7,
+        id: 'c2_out',
+        label: 'Outcome:\nImproved Hgb & Energy',
+        group: 'outcome',
+        fullTitle: 'Expected Outcome: Anemia Resolution',
+        description: 'Hemoglobin maintained within acceptable target range; patient reports significantly decreased fatigue and improved activity tolerance.'
+      },
+
+      // --- 3. THROMBOCYTOPENIA CHAIN ---
+      {
+        level: 1,
+        id: 'c3_root',
+        label: 'Cancer / Treatment:\nPlatelet Suppression',
+        group: 'root',
+        fullTitle: 'Root Etiology: Thrombopoiesis Impairment',
+        description: 'Chemotherapy-induced toxic destruction of megakaryocytes in bone marrow.'
+      },
+      {
+        level: 2,
+        id: 'c3_comp',
+        label: 'Complication:\nThrombocytopenia & Bleeding Risk',
+        group: 'complication',
+        fullTitle: 'Complication: Thrombocytopenia / Bleeding Risk',
+        description: 'Platelet count < 100,000/mm³; Critical High Risk < 20,000/mm³ (spontaneous life-threatening hemorrhage).'
+      },
+      {
+        level: 3,
+        id: 'c3_assess',
+        label: 'Assessment Findings:\nPetechiae & Mucosal Bleeding',
+        group: 'assessment',
+        fullTitle: 'Assessment Findings: Bleeding Signs',
+        description: '• Petechiae, ecchymosis, purpura, bleeding gums, epistaxis, hematuria, melena\n• Prolonged bleeding from venipuncture sites\n• Signs of intracranial hemorrhage: sudden headache, altered level of consciousness (LOC).'
+      },
+      {
+        level: 4,
+        id: 'c3_interv',
+        label: 'Priority Interventions:\nBleeding Precautions',
+        group: 'intervention',
+        fullTitle: 'Priority Nursing Interventions: Bleeding Precautions',
+        description: '• Implement strict bleeding precautions (ultra-soft toothbrush, electric razor only, no flossing)\n• Avoid Aspirin, NSAIDs, and anticoagulants\n• Apply firm pressure to venipuncture sites for 5+ minutes\n• Strictly avoid IM injections and rectal procedures\n• Transfuse platelets as ordered.'
+      },
+      {
+        level: 5,
+        id: 'c3_mon',
+        label: 'Monitoring:\nPlatelet Counts & Stool/Urine Blood',
+        group: 'monitoring',
+        fullTitle: 'Clinical Monitoring: Bleeding Risk',
+        description: '• Daily platelet counts and coagulation studies (PT/INR, PTT)\n• Test stool, urine, and emesis for occult blood\n• Frequent neurological checks to screen for intracranial bleeding.'
+      },
+      {
+        level: 6,
+        id: 'c3_edu',
+        label: 'Patient Education:\nInjury Prevention',
+        group: 'education',
+        fullTitle: 'Patient Education: Bleeding Safety',
+        description: '• Report unusual bruising, nosebleeds, or blood in stool/urine immediately\n• Avoid contact sports, sharp tools, and injury risks\n• Use stool softeners to prevent straining during bowel movements.'
+      },
+      {
+        level: 7,
+        id: 'c3_out',
+        label: 'Outcome:\nBleeding Prevented',
+        group: 'outcome',
+        fullTitle: 'Expected Outcome: Hemostasis Maintained',
+        description: 'Patient remains free from active bleeding episodes; platelet count stabilizes and recovers above safety thresholds.'
+      },
+
+      // --- 4. NAUSEA AND VOMITING (CINV) CHAIN ---
+      {
+        level: 1,
+        id: 'c4_root',
+        label: 'Cancer Treatment:\nCTZ Stimulation',
+        group: 'root',
+        fullTitle: 'Root Etiology: Chemoreceptor Trigger Zone',
+        description: 'Chemotherapy agents stimulate the CTZ in the medulla and trigger serotonin (5-HT3) release in the GI tract.'
+      },
+      {
+        level: 2,
+        id: 'c4_comp',
+        label: 'Complication:\nNausea & Vomiting (CINV)',
+        group: 'complication',
+        fullTitle: 'Complication: Chemotherapy-Induced Nausea & Vomiting (CINV)',
+        description: 'Classification: Anticipatory, Acute (within 24 hrs), or Delayed (2–5 days post-chemotherapy).'
+      },
+      {
+        level: 3,
+        id: 'c4_assess',
+        label: 'Assessment Findings:\nRetching, Dehydration & Electrolyte Loss',
+        group: 'assessment',
+        fullTitle: 'Assessment Findings: CINV Signs',
+        description: 'Nausea, retching, acute emesis, dry mucous membranes, poor skin turgor, oliguria, weight loss, electrolyte imbalances (hypokalemia, metabolic alkalosis).'
+      },
+      {
+        level: 4,
+        id: 'c4_interv',
+        label: 'Priority Interventions:\nProphylactic Antiemetics',
+        group: 'intervention',
+        fullTitle: 'Priority Nursing Interventions: CINV Care',
+        description: '• Administer combination prophylactic antiemetics BEFORE chemotherapy (5-HT3 receptor antagonists like Ondansetron, Dexamethasone, NK1 antagonist Aprepitant)\n• Provide small, frequent, bland meals\n• Maintain IV/oral hydration; encourage relaxation techniques.'
+      },
+      {
+        level: 5,
+        id: 'c4_mon',
+        label: 'Monitoring:\nStrict I&O, Weight & Electrolytes',
+        group: 'monitoring',
+        fullTitle: 'Clinical Monitoring: Fluid & Electrolyte Status',
+        description: '• Strict Intake & Output (I&O)\n• Daily weights at same time\n• Assess oral hydration and serum electrolytes (K+, Na+, Cl-, HCO3-).'
+      },
+      {
+        level: 6,
+        id: 'c4_edu',
+        label: 'Patient Education:\nDietary & Medication Timing',
+        group: 'education',
+        fullTitle: 'Patient Education: Managing CINV',
+        description: '• Take prescribed antiemetics on a fixed schedule, not just PRN\n• Eat cold or room-temperature foods to diminish strong odor triggers\n• Sip clear liquids slowly; avoid lying flat for 2 hours after eating.'
+      },
+      {
+        level: 7,
+        id: 'c4_out',
+        label: 'Outcome:\nCINV Controlled & Hydrated',
+        group: 'outcome',
+        fullTitle: 'Expected Outcome: Nutritional & Hydration Balance',
+        description: 'Nausea and vomiting controlled; patient maintains adequate hydration, stable weight, and normal electrolyte levels.'
+      },
+
+      // --- 5. MUCOSITIS / STOMATITIS CHAIN ---
+      {
+        level: 1,
+        id: 'c5_root',
+        label: 'Cancer / Treatment:\nEpithelial Cytotoxicity',
+        group: 'root',
+        fullTitle: 'Root Etiology: Oral Epithelial Damage',
+        description: 'Chemotherapy and head/neck radiation destroy rapidly dividing mucosal epithelial cells of the gastrointestinal tract.'
+      },
+      {
+        level: 2,
+        id: 'c5_comp',
+        label: 'Complication:\nOral Mucositis / Stomatitis',
+        group: 'complication',
+        fullTitle: 'Complication: Oral Mucositis / Stomatitis',
+        description: 'Severe inflammation, ulceration, and sloughing of the oral mucosa (WHO Toxicity Scale Grades 0–4).'
+      },
+      {
+        level: 3,
+        id: 'c5_assess',
+        label: 'Assessment Findings:\nOral Ulcers, Pain & Dysphagia',
+        group: 'assessment',
+        fullTitle: 'Assessment Findings: Mucositis Signs',
+        description: 'Severe oral pain, erythema, widespread mucosal ulcerations, white patches, dysphagia, severe difficulty swallowing liquids or solids.'
+      },
+      {
+        level: 4,
+        id: 'c5_interv',
+        label: 'Priority Interventions:\nGentle Oral Care & Analgesia',
+        group: 'intervention',
+        fullTitle: 'Priority Nursing Interventions: Oral Mucositis',
+        description: '• Gentle oral hygiene q4h with an ultra-soft toothbrush or foam swab\n• Perform Normal Saline or Sodium Bicarbonate mouth rinses (STRICTLY avoid alcohol-based mouthwashes)\n• Apply topical viscous lidocaine / "Magic Mouthwash" before meals\n• Provide soft, bland, moist foods.'
+      },
+      {
+        level: 5,
+        id: 'c5_mon',
+        label: 'Monitoring:\nDaily Oral Cavity & WHO Grade',
+        group: 'monitoring',
+        fullTitle: 'Clinical Monitoring: Mucosa Status',
+        description: '• Daily inspection of oral cavity using penlight and tongue blade\n• Grade severity using WHO Oral Toxicity Scale\n• Track daily caloric intake and weight.'
+      },
+      {
+        level: 6,
+        id: 'c5_edu',
+        label: 'Patient Education:\nOral Hygiene & Diet Choices',
+        group: 'education',
+        fullTitle: 'Patient Education: Oral Care Guidelines',
+        description: '• Inspect oral mucosa daily in mirror\n• Perform non-irritating mouth rinses after meals and at bedtime\n• Avoid alcohol, tobacco, spicy, acidic, hot, or rough foods\n• Report severe pain or inability to swallow fluids.'
+      },
+      {
+        level: 7,
+        id: 'c5_out',
+        label: 'Outcome:\nMucosal Healing & Comfort',
+        group: 'outcome',
+        fullTitle: 'Expected Outcome: Intact Oral Mucosa',
+        description: 'Oral mucosal integrity restored; oral pain effectively managed; adequate caloric and fluid intake maintained.'
+      },
+
+      // --- 6. SUPERIOR VENA CAVA SYNDROME (SVCS) CHAIN ---
+      {
+        level: 1,
+        id: 'c6_root',
+        label: 'Cancer / Pathology:\nSVC Compression / Thrombus',
+        group: 'root',
+        fullTitle: 'Root Etiology: Superior Vena Cava Obstruction',
+        description: 'Mediastinal tumor compression (e.g., Lung Cancer, Lymphoma) or intraluminal thrombosis obstructing blood return from upper body to heart.'
+      },
+      {
+        level: 2,
+        id: 'c6_comp',
+        label: 'Complication:\nSuperior Vena Cava Syndrome',
+        group: 'complication',
+        fullTitle: 'Complication: Superior Vena Cava Syndrome (SVCS)',
+        description: 'ONCOLOGIC EMERGENCY! Severe impairment of venous drainage from the head, neck, and upper extremities.'
+      },
+      {
+        level: 3,
+        id: 'c6_assess',
+        label: 'Assessment Findings:\nFacial Edema & Neck Distension',
+        group: 'assessment',
+        fullTitle: 'Assessment Findings: SVCS Manifestations',
+        description: '• Facial and periorbital edema (typically worst in the morning)\n• Distended neck (jugular) and chest wall veins\n• Upper extremity edema, dyspnea, persistent cough, chest pain\n• Positive Pemberton’s sign (facial flushing/dyspnea when arms are elevated).'
+      },
+      {
+        level: 4,
+        id: 'c6_interv',
+        label: 'Priority Interventions:\nPositioning, O2 & Emergency Rx',
+        group: 'intervention',
+        fullTitle: 'Priority Nursing Interventions: Emergency SVCS',
+        description: '• Elevate Head of Bed (Semi-Fowler\'s to High-Fowler\'s position) to promote venous drainage\n• Administer supplemental humidified oxygen\n• Prepare patient for emergency radiation therapy or chemotherapy\n• STRICTLY AVOID upper extremity venipuncture, IV lines, or blood pressure measurements.'
+      },
+      {
+        level: 5,
+        id: 'c6_mon',
+        label: 'Monitoring:\nAirway, SpO2 & Edema Level',
+        group: 'monitoring',
+        fullTitle: 'Clinical Monitoring: SVCS Status',
+        description: '• Continuous respiratory rate, effort, and SpO2 monitoring\n• Monitor progression of facial and upper extremity edema\n• Assess neurological status (headache, dizziness, altered LOC indicating cerebral edema).'
+      },
+      {
+        level: 6,
+        id: 'c6_edu',
+        label: 'Patient Education:\nPositioning & Early Reporting',
+        group: 'education',
+        fullTitle: 'Patient Education: SVCS Safety',
+        description: '• Avoid restrictive clothing around neck and upper body\n• Maintain head elevation while resting in bed or chair\n• Report worsening breathlessness, swallowing difficulty, or head fullness immediately.'
+      },
+      {
+        level: 7,
+        id: 'c6_out',
+        label: 'Outcome:\nVenous Drainage Restored',
+        group: 'outcome',
+        fullTitle: 'Expected Outcome: Airway & Vascular Relief',
+        description: 'Venous return to the heart restored; airway patency maintained; facial edema and respiratory distress successfully relieved.'
+      }
+    ];
+
+    // --- 2. LINKING EDGES WITH LABELS ---
+    const edgesData = [
+      // Master Connections
+      { from: 'master', to: 'c1_root', label: 'includes' },
+      { from: 'master', to: 'c2_root', label: 'includes' },
+      { from: 'master', to: 'c3_root', label: 'includes' },
+      { from: 'master', to: 'c4_root', label: 'includes' },
+      { from: 'master', to: 'c5_root', label: 'includes' },
+      { from: 'master', to: 'c6_root', label: 'includes' },
+
+      // Chain 1: Neutropenia
+      { from: 'c1_root', to: 'c1_comp', label: 'causes' },
+      { from: 'c1_comp', to: 'c1_assess', label: 'manifests as' },
+      { from: 'c1_assess', to: 'c1_interv', label: 'requires' },
+      { from: 'c1_interv', to: 'c1_mon', label: 'monitored through' },
+      { from: 'c1_mon', to: 'c1_edu', label: 'supported by' },
+      { from: 'c1_edu', to: 'c1_out', label: 'leads to' },
+
+      // Chain 2: Anemia
+      { from: 'c2_root', to: 'c2_comp', label: 'causes' },
+      { from: 'c2_comp', to: 'c2_assess', label: 'manifests as' },
+      { from: 'c2_assess', to: 'c2_interv', label: 'requires' },
+      { from: 'c2_interv', to: 'c2_mon', label: 'monitored through' },
+      { from: 'c2_mon', to: 'c2_edu', label: 'supported by' },
+      { from: 'c2_edu', to: 'c2_out', label: 'leads to' },
+
+      // Chain 3: Thrombocytopenia
+      { from: 'c3_root', to: 'c3_comp', label: 'causes' },
+      { from: 'c3_comp', to: 'c3_assess', label: 'manifests as' },
+      { from: 'c3_assess', to: 'c3_interv', label: 'requires' },
+      { from: 'c3_interv', to: 'c3_mon', label: 'monitored through' },
+      { from: 'c3_mon', to: 'c3_edu', label: 'supported by' },
+      { from: 'c3_edu', to: 'c3_out', label: 'leads to' },
+
+      // Chain 4: CINV
+      { from: 'c4_root', to: 'c4_comp', label: 'causes' },
+      { from: 'c4_comp', to: 'c4_assess', label: 'manifests as' },
+      { from: 'c4_assess', to: 'c4_interv', label: 'requires' },
+      { from: 'c4_interv', to: 'c4_mon', label: 'monitored through' },
+      { from: 'c4_mon', to: 'c4_edu', label: 'supported by' },
+      { from: 'c4_edu', to: 'c4_out', label: 'leads to' },
+
+      // Chain 5: Mucositis
+      { from: 'c5_root', to: 'c5_comp', label: 'causes' },
+      { from: 'c5_comp', to: 'c5_assess', label: 'manifests as' },
+      { from: 'c5_assess', to: 'c5_interv', label: 'requires' },
+      { from: 'c5_interv', to: 'c5_mon', label: 'monitored through' },
+      { from: 'c5_mon', to: 'c5_edu', label: 'supported by' },
+      { from: 'c5_edu', to: 'c5_out', label: 'leads to' },
+
+      // Chain 6: SVCS
+      { from: 'c6_root', to: 'c6_comp', label: 'causes' },
+      { from: 'c6_comp', to: 'c6_assess', label: 'manifests as' },
+      { from: 'c6_assess', to: 'c6_interv', label: 'requires' },
+      { from: 'c6_interv', to: 'c6_mon', label: 'monitored through' },
+      { from: 'c6_mon', to: 'c6_edu', label: 'supported by' },
+      { from: 'c6_edu', to: 'c6_out', label: 'leads to' }
+    ];
+
+    // --- 3. COLOR GROUPS STYLING ---
+    const groupStyles = {
+      master: {
+        color: { background: '#1e1b4b', border: '#818cf8', highlight: { background: '#312e81', border: '#a5b4fc' } },
+        font: { color: '#ffffff', size: 16, face: 'Segoe UI', bold: true }
+      },
+      root: {
+        color: { background: '#334155', border: '#94a3b8', highlight: { background: '#475569', border: '#cbd5e1' } },
+        font: { color: '#f8fafc', size: 12 }
+      },
+      complication: {
+        color: { background: '#991b1b', border: '#f87171', highlight: { background: '#b91c1c', border: '#fca5a5' } },
+        font: { color: '#ffffff', size: 13, bold: true }
+      },
+      assessment: {
+        color: { background: '#b45309', border: '#fbbf24', highlight: { background: '#d97706', border: '#fde047' } },
+        font: { color: '#ffffff', size: 12 }
+      },
+      intervention: {
+        color: { background: '#166534', border: '#4ade80', highlight: { background: '#15803d', border: '#86efac' } },
+        font: { color: '#ffffff', size: 12 }
+      },
+      monitoring: {
+        color: { background: '#0e7490', border: '#38bdf8', highlight: { background: '#0369a1', border: '#7dd3fc' } },
+        font: { color: '#ffffff', size: 12 }
+      },
+      education: {
+        color: { background: '#6b21a8', border: '#c084fc', highlight: { background: '#7e22ce', border: '#e9d5ff' } },
+        font: { color: '#ffffff', size: 12 }
+      },
+      outcome: {
+        color: { background: '#1e40af', border: '#60a5fa', highlight: { background: '#1d4ed8', border: '#93c5fd' } },
+        font: { color: '#ffffff', size: 12, bold: true }
+      }
+    };
+
+    // --- 4. VIS-NETWORK SETUP ---
+    const container = document.getElementById('network-container');
+
+    const data = {
+      nodes: new vis.DataSet(nodesData),
+      edges: new vis.DataSet(edgesData)
+    };
+
+    const options = {
+    layout: {
+      hierarchical: {
+        enabled: true,
+        direction: 'UD',
+        sortMethod: 'directed',
+        levelSeparation: 220,
+        nodeSpacing: 350,
+        treeSpacing: 400,
+        blockShifting: true,
+        edgeMinimization: true,
+        parentCentralization: true
+      }
+    },
+    physics: {
+      enabled: false
+    },
+    groups: groupStyles,
+    nodes: {
+      shape: 'box',
+      margin: 12,
+      borderRadius: 8,
+      borderWidth: 2,
+      shadow: { enabled: true, color: 'rgba(0,0,0,0.5)', size: 8, x: 3, y: 3 },
+      widthConstraint: { maximum: 220 }
+    },
+ groupStyles,
+      nodes: {
+        shape: 'box',
+        margin: 12,
+        borderRadius: 8,
+        borderWidth: 2,
+        shadow: { enabled: true, color: 'rgba(0,0,0,0.5)', size: 8, x: 3, y: 3 },
+        widthConstraint: { maximum: 220 }
+      },
+      edges: {
+        arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+        color: { color: '#64748b', highlight: '#38bdf8', hover: '#94a3b8' },
+        font: { color: '#cbd5e1', size: 10, align: 'middle', background: '#0f172a', strokeWidth: 0 },
+        smooth: {
+          type: 'cubicBezier',
+          forceDirection: 'vertical',
+          roundness: 0.4
+        }
+      },
+      interaction: {
+        hover: true,
+        tooltipDelay: 200,
+        navigationButtons: true,
+        keyboard: true,
+        dragNodes: true
+      }
+    };
+
+    // Initialize Network
+    const network = new vis.Network(container, data, options);
+
+    // --- 5. INTERACTION LOGIC ---
+    let physicsEnabled = false;
+
+    // Node Selection Event
+    network.on('selectNode', function (params) {
+      const selectedNodeId = params.nodes[0];
+      const node = nodesData.find(n => n.id === selectedNodeId);
+      
+      if (node) {
+        displayNodeDetails(node);
+      }
+    });
+
+    // Display Details in Sidebar
+    function displayNodeDetails(node) {
+      const detailsDiv = document.getElementById('details-content');
+      
+      const categoryBadgeColors = {
+        master: '#818cf8',
+        root: '#94a3b8',
+        complication: '#f87171',
+        assessment: '#fbbf24',
+        intervention: '#4ade80',
+        monitoring: '#38bdf8',
+        education: '#c084fc',
+        outcome: '#60a5fa'
+      };
+
+      const badgeColor = categoryBadgeColors[node.group] || '#38bdf8';
+
+      detailsDiv.innerHTML = `
+        <span class="badge" style="background: ${badgeColor}22; color: ${badgeColor}; border: 1px solid ${badgeColor};">
+          ${node.group.toUpperCase()}
+        </span>
+        <h4>${node.fullTitle || node.label.replace('\n', ' ')}</h4>
+        <p style="white-space: pre-line;">${node.description}</p>
+      `;
+    }
+
+    // Controls Logic
+    function resetZoom() {
+      network.fit({
+        animation: {
+          duration: 800,
+          easingFunction: 'easeInOutQuad'
+        }
+      });
+    }
+
+    function togglePhysics() {
+      alert("Layout is locked in a Top-Down Hierarchy. Physics are permanently disabled for stability.");
+    }
+  </script>
+</body>
+</html>
